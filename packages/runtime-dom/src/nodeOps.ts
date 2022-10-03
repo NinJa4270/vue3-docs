@@ -7,7 +7,12 @@ const doc = (typeof document !== 'undefined' ? document : null) as Document
 const templateContainer = doc && /*#__PURE__*/ doc.createElement('template')
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
+
+  // child 插入节点
+  // parent 父节点
+  // anchor 插入参考点
   insert: (child, parent, anchor) => {
+    // 会把child插入到anchor前 如果anchor为null 则会插入到parent子节点末尾
     parent.insertBefore(child, anchor || null)
   },
 
@@ -18,6 +23,10 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     }
   },
 
+  // tag: 元素的标签
+  // isSVG svg标签
+  // is 用户创建 Web Component 规范的自定义标签
+  // props 额外属性
   createElement: (tag, isSVG, is, props): Element => {
     const el = isSVG
       ? doc.createElementNS(svgNS, tag)

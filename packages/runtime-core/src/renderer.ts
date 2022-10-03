@@ -351,10 +351,10 @@ function baseCreateRenderer(
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
   const patch: PatchFn = (
-    n1,
-    n2,
-    container,
-    anchor = null,
+    n1, // 旧的 vnode 传入null表示第一次挂载
+    n2, // 新的 vnode 根据这个vnode 的type 执行不同的处理逻辑
+    container, // DOM容器 vnode生成DOM后 挂载到 container 上
+    anchor = null, // 挂载参考锚点
     parentComponent = null,
     parentSuspense = null,
     isSVG = false,
@@ -380,12 +380,15 @@ function baseCreateRenderer(
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
+        // 处理文本
         processText(n1, n2, container, anchor)
         break
       case Comment:
+        // 处理注释
         processCommentNode(n1, n2, container, anchor)
         break
       case Static:
+        // 处理静态节点
         if (n1 == null) {
           mountStaticNode(n2, container, anchor, isSVG)
         } else if (__DEV__) {
@@ -393,6 +396,7 @@ function baseCreateRenderer(
         }
         break
       case Fragment:
+        // 处理 fragment
         processFragment(
           n1,
           n2,
@@ -407,6 +411,7 @@ function baseCreateRenderer(
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
+          // 处理普通 DOM
           processElement(
             n1,
             n2,
@@ -419,6 +424,7 @@ function baseCreateRenderer(
             optimized
           )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          // 处理组件
           processComponent(
             n1,
             n2,
@@ -431,6 +437,7 @@ function baseCreateRenderer(
             optimized
           )
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
+          // 处理 Teleport
           ;(type as typeof TeleportImpl).process(
             n1 as TeleportVNode,
             n2 as TeleportVNode,
@@ -444,6 +451,7 @@ function baseCreateRenderer(
             internals
           )
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+          // 处理 suspense
           ;(type as typeof SuspenseImpl).process(
             n1,
             n2,
@@ -582,6 +590,7 @@ function baseCreateRenderer(
   ) => {
     isSVG = isSVG || (n2.type as string) === 'svg'
     if (n1 == null) {
+      // 首次挂载执行 mountElement
       mountElement(
         n2,
         container,
@@ -618,7 +627,7 @@ function baseCreateRenderer(
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
     const { type, props, shapeFlag, transition, dirs } = vnode
-
+    // 创建dom元素节点
     el = vnode.el = hostCreateElement(
       vnode.type as string,
       isSVG,
@@ -629,8 +638,10 @@ function baseCreateRenderer(
     // mount children first, since some props may rely on child content
     // being already rendered, e.g. `<select value>`
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 处理子节点是纯文本的情况
       hostSetElementText(el, vnode.children as string)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      // 处理子节点是 vnode数组情况
       mountChildren(
         vnode.children as VNodeArrayChildren,
         el,
@@ -646,7 +657,8 @@ function baseCreateRenderer(
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, 'created')
     }
-    // props
+    // props 
+    // 处理 props属性 
     if (props) {
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
@@ -704,6 +716,7 @@ function baseCreateRenderer(
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
+    // 将创建DOM元素挂载到 container 上
     hostInsert(el, container, anchor)
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
@@ -771,6 +784,7 @@ function baseCreateRenderer(
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
         : normalizeVNode(children[i]))
+        // 递归调用 patch
       patch(
         null,
         child,
@@ -1151,6 +1165,7 @@ function baseCreateRenderer(
   ) => {
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
+      // 挂载组件
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -1171,15 +1186,16 @@ function baseCreateRenderer(
         )
       }
     } else {
+      // 更新组件
       updateComponent(n1, n2, optimized)
     }
   }
 
   const mountComponent: MountComponentFn = (
-    initialVNode,
-    container,
-    anchor,
-    parentComponent,
+    initialVNode, // 组件的 vnode
+    container, // 组件挂载的 父节点
+    anchor, // 挂载的参考锚点
+    parentComponent, // 父组件实例
     parentSuspense,
     isSVG,
     optimized
@@ -1188,6 +1204,7 @@ function baseCreateRenderer(
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
+    // 创建组件实例
     const instance: ComponentInternalInstance =
       compatMountInstance ||
       (initialVNode.component = createComponentInstance(
@@ -1215,6 +1232,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
+      // 设置组件实例
       setupComponent(instance)
       if (__DEV__) {
         endMeasure(instance, `init`)
@@ -1235,6 +1253,7 @@ function baseCreateRenderer(
       return
     }
 
+    // 设置并运行带副作用的渲染函数
     setupRenderEffect(
       instance,
       initialVNode,
@@ -1294,7 +1313,9 @@ function baseCreateRenderer(
     isSVG,
     optimized
   ) => {
+    // 组件的渲染和更新函数
     const componentUpdateFn = () => {
+      // 未挂载 首次渲染
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
@@ -1361,6 +1382,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `render`)
           }
+          // 渲染组件生成 subTree 子树vnode
           const subTree = (instance.subTree = renderComponentRoot(instance))
           if (__DEV__) {
             endMeasure(instance, `render`)
@@ -1368,6 +1390,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
+          // 将subTree挂载到 container 中
           patch(
             null,
             subTree,
@@ -1380,6 +1403,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             endMeasure(instance, `patch`)
           }
+          // 保存渲染生成的子树根 DOM 节点
           initialVNode.el = subTree.el
         }
         // mounted hook
@@ -1427,6 +1451,7 @@ function baseCreateRenderer(
             )
           }
         }
+        // 挂载完成
         instance.isMounted = true
 
         if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -1436,6 +1461,7 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
+        // 已挂载 执行更新
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
@@ -1538,6 +1564,7 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
+    // 创将组件渲染函数的副作用响应式对象
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(update),
@@ -1548,6 +1575,7 @@ function baseCreateRenderer(
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
+   // 允许递归更新自己
     toggleRecurse(instance, true)
 
     if (__DEV__) {
@@ -2356,6 +2384,7 @@ function toggleRecurse(
   { effect, update }: ComponentInternalInstance,
   allowed: boolean
 ) {
+  // 允许递归更新自己
   effect.allowRecurse = update.allowRecurse = allowed
 }
 
