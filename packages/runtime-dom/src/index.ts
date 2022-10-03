@@ -30,7 +30,7 @@ declare module '@vue/reactivity' {
     runtimeDOMBailTypes: Node | Window
   }
 }
-
+// 平台渲染相关的配置 属性更新 操作dom等
 const rendererOptions = /*#__PURE__*/ extend({ patchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
@@ -38,7 +38,7 @@ const rendererOptions = /*#__PURE__*/ extend({ patchProp }, nodeOps)
 let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
-
+// 延时创建渲染器 当用户只以来响应式包的时候，可以通过 `tree-shaking` 移除核心渲染逻辑相关代码
 function ensureRenderer() {
   return (
     renderer ||
@@ -64,6 +64,7 @@ export const hydrate = ((...args) => {
 }) as RootHydrateFunction
 
 export const createApp = ((...args) => {
+  // ensureRenderer() 创建渲染器对象 包含平台渲染核心逻辑的对象
   const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {
@@ -72,11 +73,14 @@ export const createApp = ((...args) => {
   }
 
   const { mount } = app
+  // web 平台 重写 mount
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
+    // 标准化容器
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
     const component = app._component
+    // 如果组件对象没有定义 render/template 则取容器的 innerHTML作为组件的模版内容
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
@@ -99,7 +103,9 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
+    // 挂载前 清空容器内容
     container.innerHTML = ''
+    //  执行保存的 mount 方法 完成真正的挂载
     const proxy = mount(container, false, container instanceof SVGElement)
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')

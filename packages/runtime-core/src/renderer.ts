@@ -2340,15 +2340,19 @@ function baseCreateRenderer(
   }
 
   const render: RootRenderFunction = (vnode, container, isSVG) => {
+    // 组件渲染的核心逻辑
     if (vnode == null) {
       if (container._vnode) {
+        // 销毁组件
         unmount(container._vnode, null, null, true)
       }
     } else {
+      // 创建/更新组件
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
     flushPreFlushCbs()
     flushPostFlushCbs()
+    // 缓存 vnode 节点 表示已经渲染
     container._vnode = vnode
   }
 

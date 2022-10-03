@@ -178,6 +178,8 @@ export function createAppAPI<HostElement>(
   render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
+  // rootComponent 根组建对象 
+  // rootProps 根属性
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
       rootComponent = { ...rootComponent }
@@ -292,6 +294,7 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
           }
+          // 创建根组件的 vnode
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -310,6 +313,7 @@ export function createAppAPI<HostElement>(
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
+            // 利用传入的 render渲染器 渲染vnode
             render(vnode, rootContainer, isSVG)
           }
           isMounted = true
