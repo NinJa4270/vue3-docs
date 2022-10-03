@@ -364,11 +364,11 @@ function baseCreateRenderer(
     if (n1 === n2) {
       return
     }
-
-    // patching & not same type, unmount old tree
+    // 如果存在 新旧节点 并且类型不同 则直接销毁旧节点
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
+      // 将 n1 设置为 null 以第一次挂载逻辑执行后续逻辑
       n1 = null
     }
 
@@ -1271,8 +1271,13 @@ function baseCreateRenderer(
   }
 
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
+    // 复制 component 属性
     const instance = (n2.component = n1.component)!
+    // shouldUpdateComponent 根据新旧组件的 vnode props/children/dirs/transition等属性
+    // 判断是否需要更新子组件
+    // 因为一个组件是否需要更新，取决于子组件vnode 是否存在一些影响组件更新的属性变化
     if (shouldUpdateComponent(n1, n2, optimized)) {
+      // 异步组件更新逻辑 
       if (
         __FEATURE_SUSPENSE__ &&
         instance.asyncDep &&
@@ -1289,17 +1294,18 @@ function baseCreateRenderer(
         }
         return
       } else {
-        // normal update
+        // 普通组件更新逻辑
+        // 将新的子组件 vnode 赋值给 instance.next
         instance.next = n2
-        // in case the child component is also queued, remove it to avoid
-        // double updating the same child component in the same flush.
+        // 子组件也可能因为数据变化而被添加到更新队列中，为了避免重复更新 将它移除
         invalidateJob(instance.update)
-        // instance.update is the reactive effect.
+        // 执行子组件的副作用函数
         instance.update()
       }
     } else {
-      // no update needed. just copy over properties
+      // 不需要更新
       n2.el = n1.el
+      // 在子组件实例的 vnode 属性中保存新的组件 vnode n2
       instance.vnode = n2
     }
   }
@@ -1597,11 +1603,17 @@ function baseCreateRenderer(
     nextVNode: VNode,
     optimized: boolean
   ) => {
+    // 新组件的 vnode component 指向实例
     nextVNode.component = instance
+    // 旧组件 vnode 的 属性
     const prevProps = instance.vnode.props
+    // 组件实例的 vnode属性 指向 新的组件的 vnode
     instance.vnode = nextVNode
+    // 清空next属性 为重新渲染做准备
     instance.next = null
+    // 更新 props属性
     updateProps(instance, nextVNode.props, prevProps, optimized)
+    // 更新插槽
     updateSlots(instance, nextVNode.children, optimized)
 
     pauseTracking()
