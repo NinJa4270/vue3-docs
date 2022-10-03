@@ -1462,9 +1462,7 @@ function baseCreateRenderer(
         initialVNode = container = anchor = null as any
       } else {
         // 已挂载 执行更新
-        // updateComponent
-        // This is triggered by mutation of component's own state (next: null)
-        // OR parent calling processComponent (next: VNode)
+        // next 表示新的组件 vnode
         let { next, bu, u, parent, vnode } = instance
         let originNext = next
         let vnodeHook: VNodeHook | null | undefined
@@ -1476,6 +1474,7 @@ function baseCreateRenderer(
         toggleRecurse(instance, false)
         if (next) {
           next.el = vnode.el
+          // 更新组件 vnode 信息
           updateComponentPreRender(instance, next, optimized)
         } else {
           next = vnode
@@ -1501,23 +1500,24 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
+        // 渲染新的 子树vnode
         const nextTree = renderComponentRoot(instance)
         if (__DEV__) {
           endMeasure(instance, `render`)
         }
+        // 缓存旧的 子树vnode
         const prevTree = instance.subTree
         instance.subTree = nextTree
 
         if (__DEV__) {
           startMeasure(instance, `patch`)
         }
+        // 更新子树vnode
         patch(
           prevTree,
           nextTree,
-          // parent may have changed if it's in a teleport
-          hostParentNode(prevTree.el!)!,
-          // anchor may have changed if it's in a fragment
-          getNextHostNode(prevTree),
+          hostParentNode(prevTree.el!)!, // 父节点在 teleport 组件中可能已经改变，所以容器直接查找旧树dom元素的父节点
+          getNextHostNode(prevTree), // 参考节点在 fragment 组件中可能已经改变，所以直接查找旧树dom元素的下一个节点
           instance,
           parentSuspense,
           isSVG
@@ -1525,6 +1525,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           endMeasure(instance, `patch`)
         }
+        // 缓存更新后的 dom 节点
         next.el = nextTree.el
         if (originNext === null) {
           // self-triggered update. In case of HOC, update parent component
